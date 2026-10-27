@@ -1,0 +1,29 @@
+{
+  "name": "nairabridge-fx",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI agent on Celo that converts cNGN <-> USDT at the best Textile FX rate, with a public Quote Sentinel rate board",
+  "type": "module",
+  "scripts": {
+    "quote": "tsx scripts/quote-once.ts",
+    "sentinel": "tsx src/sentinel/run.ts",
+    "register-agent": "tsx scripts/register-agent.ts",
+    "verify-tag": "tsx scripts/verify-tag.ts",
+    "new-wallet": "tsx scripts/new-wallet.ts",
+    "new-wallet": "tsx scripts/new-wallet.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@celo/attribution-tags": "^0.5.0",
+    "better-sqlite3": "^12.0.0",
+    "dotenv": "^16.4.5",
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.6.0"
+  }
+}

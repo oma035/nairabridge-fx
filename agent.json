@@ -1,0 +1,13 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "NairaBridge FX",
+  "description": "Non-custodial agent that converts cNGN and USDT on Celo at the best Textile FX rate for Nigerian freelancers, with a public Quote Sentinel rate board.",
+  "image": "",
+  "services": [
+    { "name": "web", "endpoint": "" },
+    { "name": "telegram", "endpoint": "" }
+  ],
+  "x402Support": false,
+  "active": true,
+  "supportedTrust": ["reputation"]
+}
