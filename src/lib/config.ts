@@ -59,6 +59,8 @@ export const config = {
   port: Number(env('PORT', '8787')),
   walletConnectProjectId: process.env.WALLETCONNECT_PROJECT_ID || '',
   explorerApi: env('EXPLORER_API', 'https://celo.blockscout.com/api'),
+  /** Public rate board (Lovable front end reading /api/board). */
+  boardUrl: env('BOARD_URL', 'https://nairabridgefx.lovable.app'),
 }
 
 /** Hackathon rule: real users must have had Celo activity before this instant. */

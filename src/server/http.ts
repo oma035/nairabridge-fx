@@ -50,7 +50,9 @@ export function startServer(port = config.port) {
     const url = new URL(req.url ?? '/', 'http://x')
     const path = url.pathname
     try {
-      if (req.method === 'GET' && (path === '/' || /^\/(link|c)\/[\w-]+$/.test(path))) return await page(res)
+      // the public rate board lives on Lovable; send visitors of the bare domain there
+      if (req.method === 'GET' && path === '/') { res.writeHead(302, { Location: config.boardUrl }); return res.end() }
+      if (req.method === 'GET' && /^\/(link|c)\/[\w-]+$/.test(path)) return await page(res)
       // bundled client: /app.js and its lazily loaded chunks (WalletConnect)
       const js = path.match(/^\/((?:app|chunk-[A-Za-z0-9]+))\.js$/)
       if (req.method === 'GET' && js) {
