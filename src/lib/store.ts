@@ -16,10 +16,11 @@ export interface User {
   created_at: number
 }
 
-export function upsertUser(tgId: string | number, username: string | undefined, chatId: string | number): User {
+/** chatId = the user's PRIVATE chat with the bot; pass null from groups so it is never overwritten. */
+export function upsertUser(tgId: string | number, username: string | undefined, chatId: string | number | null): User {
   db.prepare(`INSERT INTO users (tg_id, tg_username, tg_chat_id, created_at) VALUES (?, ?, ?, ?)
-              ON CONFLICT(tg_id) DO UPDATE SET tg_username = excluded.tg_username, tg_chat_id = excluded.tg_chat_id`)
-    .run(String(tgId), username ?? null, String(chatId), Date.now())
+              ON CONFLICT(tg_id) DO UPDATE SET tg_username = excluded.tg_username, tg_chat_id = COALESCE(excluded.tg_chat_id, users.tg_chat_id)`)
+    .run(String(tgId), username ?? null, chatId === null ? null : String(chatId), Date.now())
   return getUserByTg(tgId)!
 }
 

@@ -30,7 +30,7 @@ const HELP = [
 ].join('\n')
 
 function me(ctx: Context): User {
-  return upsertUser(ctx.from!.id, ctx.from!.username, ctx.chat?.id ?? ctx.from!.id)
+  return upsertUser(ctx.from!.id, ctx.from!.username, ctx.chat?.type === 'private' ? ctx.chat.id : null)
 }
 
 async function sendLink(ctx: Context, user: User) {
@@ -69,6 +69,21 @@ function describe(p: Preview): string {
 export function createBot() {
   const bot = new Bot(config.botToken())
 
+  // ---------- groups: public /rate only, everything personal goes to a private chat ----------
+  bot.use(async (ctx, next) => {
+    if (!ctx.chat || ctx.chat.type === 'private' || ctx.callbackQuery) return next()
+    const text = ctx.message?.text ?? ''
+    if (!text.startsWith('/')) return // never react to normal group conversation
+    const [head] = text.split(/\s/)
+    const [cmdRaw, target] = head.slice(1).split('@')
+    if (target && target.toLowerCase() !== ctx.me.username.toLowerCase()) return // command meant for another bot
+    const cmd = cmdRaw.toLowerCase()
+    if (cmd === 'rate') return next()
+    const kb = new InlineKeyboard().url(`Open @${ctx.me.username}`, `https://t.me/${ctx.me.username}?start=${/^\w{1,32}$/.test(cmd) ? cmd : 'go'}`)
+    return ctx.reply(`/${cmd} works in a private chat with me, so your wallet, alerts and conversions stay private. In groups I only answer /rate.`,
+      { reply_markup: kb, reply_parameters: { message_id: ctx.message!.message_id, allow_sending_without_reply: true } })
+  })
+
   bot.command('start', async (ctx) => {
     const user = me(ctx)
     if (user.wallet) {
@@ -91,7 +106,8 @@ export function createBot() {
   })
 
   bot.command('rate', async (ctx) => {
-    me(ctx)
+    const inGroup = ctx.chat.type !== 'private'
+    if (!inGroup) me(ctx) // group /rate is anonymous: it does not register a user
     const parsed = parseAmount(ctx.match || '100') ?? parseAmount('100')!
     await ctx.replyWithChatAction('typing')
     const p = await preview(parsed.token, parsed.amount)
@@ -101,8 +117,10 @@ export function createBot() {
     const otherAmt = parsed.token === 'USDT' ? parsed.amount * mid : parsed.amount / mid
     const q = await preview(other(parsed.token), otherAmt).catch(() => undefined)
     if (q) lines.push('', describe(q))
-    lines.push('', 'Indicative price. /convert locks a firm quote before you sign.')
-    await ctx.reply(lines.join('\n'))
+    lines.push('', inGroup ? 'Indicative price. Convert privately in your own wallet:' : 'Indicative price. /convert locks a firm quote before you sign.')
+    await ctx.reply(lines.join('\n'), inGroup
+      ? { reply_markup: new InlineKeyboard().url('Convert privately →', `https://t.me/${ctx.me.username}?start=convert`) }
+      : {})
   })
 
   bot.command('convert', async (ctx) => {
@@ -266,4 +284,6 @@ export async function setCommands(bot: Bot) {
     { command: 'link', description: 'Link a different wallet' },
     { command: 'help', description: 'How it works' },
   ])
+  // in groups the menu shows only the public command
+  await bot.api.setMyCommands([{ command: 'rate', description: 'Live USDT ↔ naira rate on Celo' }], { scope: { type: 'all_group_chats' } })
 }
