@@ -53,6 +53,15 @@ export const config = {
     sizesUsd: env('SENTINEL_SIZES_USD', '10,50,200,1000').split(',').map(Number).filter((n) => n > 0),
   },
   dbPath: env('DB_PATH', './data/nairabridge.db'),
+  botToken: () => env('TELEGRAM_BOT_TOKEN'),
+  /** Public HTTPS base URL of the web server (wallet link + convert pages). */
+  publicUrl: () => env('PUBLIC_URL').replace(/\/$/, ''),
+  port: Number(env('PORT', '8787')),
+  walletConnectProjectId: process.env.WALLETCONNECT_PROJECT_ID || '',
+  explorerApi: env('EXPLORER_API', 'https://celo.blockscout.com/api'),
 }
+
+/** Hackathon rule: real users must have had Celo activity before this instant. */
+export const ELIGIBILITY_CUTOFF_MS = Date.UTC(2026, 9, 6) // 2026-10-06T00:00:00Z
 
 export type { Address }
