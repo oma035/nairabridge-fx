@@ -44,7 +44,7 @@ async function sendLink(ctx: Context, user: User) {
 
 function refLines(p: Preview, usdAmt: number) {
   const out: string[] = []
-  for (const r of [p.refs.parallel, p.refs.official]) {
+  for (const r of [p.refs.parallel]) { // mid-market comparison kept on the board, hidden in chat
     if (!r.rate || !p.rate) continue
     const s = savingsNgn(p.sell, p.rate, usdAmt, r.rate)!
     out.push(`vs ${r.label} ${fmtRate(r.rate)}: ${ngn(Math.abs(s))} ${s >= 0 ? 'better' : 'worse'} for you`)
