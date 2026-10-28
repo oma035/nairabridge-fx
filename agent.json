@@ -5,7 +5,11 @@
   "services": [
     {
       "name": "web",
-      "endpoint": "https://github.com/oma035/nairabridge-fx"
+      "endpoint": "https://nairabridge-fx.onrender.com"
+    },
+    {
+      "name": "telegram",
+      "endpoint": "https://t.me/NairaBridgeFX_bot"
     },
     {
       "name": "wallet",

@@ -14,7 +14,7 @@ Built for **Agents on Open Rails** (Celo x Loops House), Open Corridors track, T
 | ERC-8004 agent ID | **9998** on Identity Registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` ([registration tx](https://celoscan.io/tx/0xeb12ce2591426396ba7319c37db9a5928457d8db7a5c29b20daf766094741e30)) |
 | Agent wallet | [`0x1663a732de275506b569a92A90233be582288906`](https://celoscan.io/address/0x1663a732de275506b569a92A90233be582288906) |
 | ERC-8021 attribution code | `celo_f91a4dd61bbc` (Loops House), set in `ATTRIBUTION_CODE` |
-| Example mainnet txs | [ERC-8004 registration (tagged)](https://celoscan.io/tx/0xeb12ce2591426396ba7319c37db9a5928457d8db7a5c29b20daf766094741e30) |
+| Example mainnet txs | [ERC-8004 registration (tagged)](https://celoscan.io/tx/0xeb12ce2591426396ba7319c37db9a5928457d8db7a5c29b20daf766094741e30), [first Textile swap: $2 USDT → ₦2,768 cNGN (tagged)](https://celoscan.io/tx/0x4056ad60417f38fc9d2c3afebdcd06e5692833c529d18e209826dcf5f687796f) |
 | Gas sponsorship / relayer | **None.** Users pay their own gas and sign every transaction in their own wallet. |
 
 ## How the attribution tag is applied
