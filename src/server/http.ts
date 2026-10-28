@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { config } from '../lib/config.js'
 import { TextileError } from '../lib/textile.js'
+import { boardHistory, boardSnapshot } from './board.js'
 import { convertApproval, convertInfo, convertQuote, convertStatus, convertSubmit, HttpError, linkChallenge, linkVerify, publicConfig } from './api.js'
 
 const WEB = join(process.cwd(), 'web')
@@ -17,12 +18,13 @@ async function body(req: IncomingMessage): Promise<any> {
   try { return raw ? JSON.parse(raw) : {} } catch { throw new HttpError(400, 'invalid JSON') }
 }
 
-function send(res: ServerResponse, status: number, data: unknown, type = 'application/json') {
+function send(res: ServerResponse, status: number, data: unknown, type = 'application/json', extra: Record<string, string> = {}) {
   res.writeHead(status, {
     'Content-Type': type,
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
+    ...extra,
   })
   res.end(type === 'application/json' ? JSON.stringify(data) : (data as string | Buffer))
 }
@@ -56,6 +58,13 @@ export function startServer(port = config.port) {
           'text/javascript; charset=utf-8')
       }
       if (req.method === 'GET' && path === '/healthz') return send(res, 200, { ok: true })
+      // public, read-only rate board feed (CORS open so the Lovable front end can call it)
+      if (path.startsWith('/api/board')) {
+        const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, OPTIONS', 'Cache-Control': 'public, max-age=15' }
+        if (req.method === 'OPTIONS') return send(res, 204, '', 'text/plain', cors)
+        if (req.method === 'GET' && path === '/api/board') return send(res, 200, await boardSnapshot(), 'application/json', cors)
+        if (req.method === 'GET' && path === '/api/board/history') return send(res, 200, boardHistory(url.searchParams.get('range') ?? '24h'), 'application/json', cors)
+      }
       for (const [method, re, handler] of routes) {
         const m = path.match(re)
         if (m && req.method === method) return send(res, 200, await handler(req, m))
