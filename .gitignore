@@ -4,3 +4,5 @@ data/*.db
 data/*.db-*
 .DS_Store
 web/dist
+cloudflared
+cf.tgz
