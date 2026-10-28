@@ -3,10 +3,24 @@
   "name": "NairaBridge FX",
   "description": "Non-custodial agent that converts cNGN and USDT on Celo at the best Textile FX rate for Nigerian freelancers, with a public Quote Sentinel rate board tracking live rates and liquidity.",
   "services": [
-    { "name": "web", "endpoint": "https://github.com/oma035/nairabridge-fx" },
-    { "name": "wallet", "endpoint": "eip155:42220:0x1663a732de275506b569a92A90233be582288906" }
+    {
+      "name": "web",
+      "endpoint": "https://github.com/oma035/nairabridge-fx"
+    },
+    {
+      "name": "wallet",
+      "endpoint": "eip155:42220:0x1663a732de275506b569a92A90233be582288906"
+    }
   ],
   "x402Support": false,
   "active": true,
-  "supportedTrust": ["reputation"]
+  "supportedTrust": [
+    "reputation"
+  ],
+  "registrations": [
+    {
+      "agentId": 9998,
+      "agentRegistry": "eip155:42220:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+    }
+  ]
 }
