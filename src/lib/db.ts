@@ -71,6 +71,10 @@ addColumn('users', 'tg_username', 'TEXT')
 addColumn('users', 'tg_chat_id', 'TEXT')
 addColumn('users', 'eligible', 'INTEGER')                  // 1/0/null(unknown)
 addColumn('users', 'eligibility_note', 'TEXT')
+addColumn('alerts', 'created_rate', 'REAL')                // rate when the alert was set (benchmark for "waiting")
+addColumn('alerts', 'expires_at', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('alerts', 'cancelled_at', 'INTEGER')
+addColumn('alerts', 'fired_rate', 'REAL')
 
 db.exec(`
 -- Short-lived, single-purpose links the bot hands out (wallet link, convert).

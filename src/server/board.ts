@@ -9,6 +9,7 @@ import { config, ERC8004, TEXTILE_CELO } from '../lib/config.js'
 import { referenceRates } from '../lib/reference.js'
 import { fromAtomic, savingsNgn } from '../lib/fx.js'
 import type { Fill } from '../lib/store.js'
+import { alertStats } from '../agent/alerts.js'
 
 const AGENT = {
   name: 'NairaBridge FX',
@@ -136,6 +137,7 @@ export async function boardSnapshot() {
       volumeFilledUsd: r2(filledUsd),
       fills: fills.length,
       users: { total: u.users ?? 0, linkedWallets: u.linked ?? 0, eligible: u.eligible ?? 0, converting: u.converting ?? 0 },
+      alerts: (({ active, fired, total }) => ({ active: active ?? 0, fired: fired ?? 0, total }))(alertStats()),
     },
     pnl: pnl(fills),
     recentFills: fills.slice(0, 10).map((f) => ({

@@ -13,14 +13,14 @@ Object.assign(process.env, {
 export const user = privateKeyToAccount(generatePrivateKey())
 export const REACTOR = '0xa9AA0a64769cBed4d3B1Ceb4Df01CdE915C235b3'
 export const tg: any[] = []
-export const state = { swapInput: '', requestCalls: 0 }
+export const state = { swapInput: '', requestCalls: 0, usdtRate: 138402n /* NGN per USDT x100 */ }
 export const realFetch = globalThis.fetch
 globalThis.fetch = (async (url: any, init?: any) => {
   const u = String(url); const ok = (d: any, s = 200) => new Response(JSON.stringify(d), { status: s })
   if (u.startsWith('http://127.0.0.1')) return realFetch(url, init)
   if (u.includes('api.telegram.org')) { const m = u.split('/').pop(); const b = init?.body ? JSON.parse(init.body) : {}; tg.push({ m, ...b }); return ok({ ok: true, result: m === 'getMe' ? { id: 1, is_bot: true, first_name: 'NB', username: 'nb_bot' } : { message_id: tg.length, date: 0, chat: { id: 1, type: 'private' } } }) }
   if (u.includes('blockscout')) return ok({ status: '1', result: [{ timeStamp: String(Date.UTC(2026, 6, 1) / 1000) }] })
-  if (u.includes('/v2/rfq/preview')) { const b = JSON.parse(init.body); const sell = BigInt(b.sellAmount); const fee = sell / 10000n; const isU = b.sellToken.startsWith('0x4806'); return ok({ data: { status: 'preview', sellAmount: b.sellAmount, takerPays: b.sellAmount, feeAmount: fee.toString(), buyAmount: (isU ? (sell - fee) * 138402n / 100n : (sell - fee) * 100n / 138458n).toString() } }) }
+  if (u.includes('/v2/rfq/preview')) { const b = JSON.parse(init.body); const sell = BigInt(b.sellAmount); const fee = sell / 10000n; const isU = b.sellToken.startsWith('0x4806'); return ok({ data: { status: 'preview', sellAmount: b.sellAmount, takerPays: b.sellAmount, feeAmount: fee.toString(), buyAmount: (isU ? (sell - fee) * state.usdtRate / 100n : (sell - fee) * 100n / 138458n).toString() } }) }
   if (u.includes('/v2/rfq/request')) {
     state.requestCalls++; const b = JSON.parse(init.body)
     if (!b.takerProof) return ok({ error: { code: 'unauthorized', message: 'proof required', details: { reason: 'proof_of_control_required' } } }, 401)

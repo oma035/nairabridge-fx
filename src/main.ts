@@ -9,6 +9,7 @@ import { startServer } from './server/http.js'
 import { createBot, setCommands } from './bot/bot.js'
 import { tick } from './sentinel/run.js'
 import { sleep } from './lib/textile.js'
+import { checkAlerts } from './agent/alerts.js'
 
 startServer()
 
@@ -24,6 +25,12 @@ if (process.env.RUN_SENTINEL !== '0') {
         console.log(`sentinel: ${rows.length} quotes stored`)
       } catch (e: any) {
         console.error('sentinel tick failed:', e.message)
+      }
+      try {
+        const { checked, fired } = await checkAlerts()
+        if (checked) console.log(`alerts: ${checked} checked, ${fired} fired`)
+      } catch (e: any) {
+        console.error('alert check failed:', e.message)
       }
       await sleep(config.sentinel.intervalSec * 1000)
     }

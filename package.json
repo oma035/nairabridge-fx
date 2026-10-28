@@ -14,7 +14,7 @@
     "verify-tag": "tsx scripts/verify-tag.ts",
     "new-wallet": "tsx scripts/new-wallet.ts",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && tsx test/e2e.mts && tsx test/board.mts"
+    "test": "npm run build && tsx test/e2e.mts && tsx test/board.mts && tsx test/alerts.mts"
   },
   "engines": {
     "node": ">=20"

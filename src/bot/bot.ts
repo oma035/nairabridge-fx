@@ -8,6 +8,9 @@ import { config } from '../lib/config.js'
 import { celoscanAddr } from '../lib/chain.js'
 import { allUserFills, createSession, getUserByTg, upsertUser, useSession, liveSession, userFills, type User, type ConvertPayload } from '../lib/store.js'
 import { fmtRate, fmtToken, ngn, other, parseAmount, preview, savingsNgn, signedNgn, toAtomic, fromAtomic, type Preview } from '../lib/fx.js'
+import type { TokenSymbol } from '../lib/config.js'
+import { db } from '../lib/db.js'
+import { activeAlerts, cancelAlert, createAlert, describeAlert, firedMessage, getAlert, isMet } from '../agent/alerts.js'
 
 const LINK_TTL = 15 * 60_000
 const CONVERT_TTL = 15 * 60_000
@@ -18,13 +21,16 @@ const HELP = [
   '/rate 100  current rate for $100 (or /rate 50000 cngn)',
   '/convert 50 usdt  USDT → naira',
   '/convert 70000 cngn  naira → USDT',
+  '/alert 1390  tell me when $100 cashes out at ₦1,390+ per $1',
+  '/alert 1380 70000 cngn  tell me when buying USDT costs ₦1,380 or less',
+  '/alerts  your active alerts',
   '/history  your conversions and savings',
   '/wallet  your linked wallet',
   '/link  link a different wallet',
 ].join('\n')
 
 function me(ctx: Context): User {
-  return upsertUser(ctx.from!.id, ctx.from!.username, ctx.chat!.id)
+  return upsertUser(ctx.from!.id, ctx.from!.username, ctx.chat?.id ?? ctx.from!.id)
 }
 
 async function sendLink(ctx: Context, user: User) {
@@ -138,6 +144,78 @@ export function createBot() {
     await ctx.reply('Cancelled. Nothing was sent.')
   })
 
+  // ---------- alerts ----------
+  const ALERT_HELP = [
+    'Set a rate alert. I check Textile every 3 minutes and message you when it hits.',
+    '',
+    '/alert 1390  cash out $100 when you get ₦1,390+ per $1',
+    '/alert 1390 50 usdt  same, for $50',
+    '/alert 1380 70000 cngn  top up when ₦70,000 buys USDT at ₦1,380 or less per $1',
+  ].join('\n')
+
+  /** "/alert <rate> [amount] [usdt|cngn]" -> parts, or an error message */
+  function parseAlert(text: string): { target: number; sell: TokenSymbol; amount: number } | string {
+    const [first, ...rest] = text.trim().replace(/,/g, '').split(/\s+/)
+    const target = Number(first?.replace(/^₦/, ''))
+    if (!first || !(target > 0)) return ALERT_HELP
+    if (target < 500 || target > 5000) return `${first} doesn't look like a naira per dollar rate. Rates are around ${fmtRate(1385)}.`
+    const tail = rest.join(' ').toLowerCase()
+    if (!tail) return { target, sell: 'USDT', amount: 100 }
+    if (/^(usdt|usd|\$)$/.test(tail)) return { target, sell: 'USDT', amount: 100 }
+    if (/^(cngn|ngn|naira|₦)$/.test(tail)) return { target, sell: 'cNGN', amount: 140_000 }
+    const amt = parseAmount(tail)
+    return amt ? { target, sell: amt.token, amount: amt.amount } : ALERT_HELP
+  }
+
+  async function setAlert(ctx: Context, user: User, target: number, sell: TokenSymbol, amount: number) {
+    const p = await preview(sell, amount)
+    let a
+    try { a = createAlert(user.id, sell, amount, target, p.ok ? p.rate! : null) } catch (e: any) { return ctx.reply(e.message) }
+    // already met right now: fire immediately instead of waiting 3 minutes
+    if (p.ok && p.rate && p.receives && isMet(sell, p.rate, target)) {
+      db.prepare('UPDATE alerts SET fired_at = ?, fired_rate = ? WHERE id = ?').run(Date.now(), p.rate, a.id)
+      const { text, kb } = firedMessage(a, p.rate, p.receives, !!user.wallet)
+      return ctx.reply(`Good news, the rate already beats your target.\n\n${text}`, { reply_markup: kb })
+    }
+    const now = p.ok ? `Now: ${fmtRate(p.rate!)} NGN/USDT for this amount.` : 'No maker can fill this amount right now; I will keep checking.'
+    return ctx.reply(`🔔 Alert #${a.id} set: ${describeAlert(a)}\n${now}\nI check every 3 minutes for 7 days. /alerts to manage.`)
+  }
+
+  bot.command('alert', async (ctx) => {
+    const user = me(ctx)
+    const parsed = parseAlert(ctx.match || '')
+    if (typeof parsed === 'string') {
+      const p = await preview('USDT', 100).catch(() => undefined)
+      return ctx.reply(p?.ok ? `${parsed}\n\nRight now $100 cashes out at ${fmtRate(p.rate!)} NGN/USDT.` : parsed)
+    }
+    await ctx.replyWithChatAction('typing')
+    return setAlert(ctx, user, parsed.target, parsed.sell, parsed.amount)
+  })
+
+  bot.command('alerts', async (ctx) => {
+    const user = me(ctx)
+    const list = activeAlerts(user.id)
+    if (!list.length) return ctx.reply(`No active alerts.\n\n${ALERT_HELP}`)
+    const kb = InlineKeyboard.from(list.map((a) => [InlineKeyboard.text(`✖ Cancel #${a.id}`, `cancelalert:${a.id}`)]))
+    const lines = list.map((a) => `#${a.id}  ${describeAlert(a)}  (until ${new Date(a.expires_at).toISOString().slice(0, 10)})`)
+    return ctx.reply(['🔔 Your active alerts', '', ...lines].join('\n'), { reply_markup: kb })
+  })
+
+  bot.callbackQuery(/^cancelalert:(\d+)$/, async (ctx) => {
+    const user = me(ctx)
+    const ok = cancelAlert(user.id, Number(ctx.match[1]))
+    await ctx.answerCallbackQuery({ text: ok ? 'Alert cancelled' : 'Already gone' })
+    if (ok) await ctx.reply(`Alert #${ctx.match[1]} cancelled.`)
+  })
+
+  bot.callbackQuery(/^rearm:(\d+)$/, async (ctx) => {
+    const user = me(ctx)
+    const old = getAlert(Number(ctx.match[1]))
+    await ctx.answerCallbackQuery()
+    if (!old || old.user_id !== user.id) return ctx.reply('That alert is not yours.')
+    return setAlert(ctx, user, old.target_rate, old.sell, fromAtomic(old.amount, old.sell))
+  })
+
   bot.command('history', async (ctx) => {
     const u = me(ctx)
     const recent = userFills(u.id, 10)
@@ -181,6 +259,8 @@ export async function setCommands(bot: Bot) {
   await bot.api.setMyCommands([
     { command: 'rate', description: 'Live USDT ↔ naira rate' },
     { command: 'convert', description: 'Convert, e.g. /convert 50 usdt' },
+    { command: 'alert', description: 'Rate alert, e.g. /alert 1390' },
+    { command: 'alerts', description: 'Your active alerts' },
     { command: 'history', description: 'Your conversions and savings' },
     { command: 'wallet', description: 'Your linked wallet' },
     { command: 'link', description: 'Link a different wallet' },
