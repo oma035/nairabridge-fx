@@ -59,3 +59,11 @@ CREATE TABLE IF NOT EXISTS alerts (
   amount TEXT NOT NULL, target_rate REAL NOT NULL, created_at INTEGER NOT NULL, fired_at INTEGER
 );
 `)
+
+// ---- migrations (add columns to databases created by earlier versions) ----
+function addColumn(table: string, col: string, type: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`)
+}
+addColumn('quotes', 'available_sell', 'TEXT')            // published depth on the sell leg (atomic)
+addColumn('quotes', 'probe', 'INTEGER NOT NULL DEFAULT 0') // 1 = max-fillable probe row

@@ -21,7 +21,8 @@ for (const sell of ['USDT', 'cNGN'] as const) {
   const sellAmount = parseUnits(human.toFixed(6), TOKENS[sell].decimals)
   const p = await textile.preview({ sell, buy, sellAmount })
   if (p.status !== 'preview') {
-    console.log(`${sell} -> ${buy}: no quote (${p.reason}) available=${p.availableSellAmount ?? '?'}`)
+    const avail = p.availableSellAmount ? Number(p.availableSellAmount) / 10 ** TOKENS[sell].decimals : undefined
+    console.log(`${sell} -> ${buy}: no quote (${p.reason})${avail !== undefined ? `, max available now ${avail.toFixed(2)} ${sell}` : ''}`)
     continue
   }
   const rate = effectiveNgnPerUsdt(sell, { takerPays: p.takerPays!, buyAmount: p.buyAmount! })
