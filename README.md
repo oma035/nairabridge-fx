@@ -123,6 +123,7 @@ Telegram ──► bot (grammY) ──► short-lived link ──► convert pag
 ```
 src/
   main.ts               one process: web + bot + Sentinel loop + alert checks
+  demo.ts               demo mode: simulated Textile market, no secrets needed
   lib/config.ts         env + official addresses (with sources)
   lib/attribution.ts    ERC-8021: the single place the tag is applied
   lib/textile.ts        RFQ v2 client, throttle, backoff, safety checks, rate maths
@@ -144,10 +145,21 @@ test/                   end-to-end tests with Telegram, Textile, explorer and RP
 
 ## Running it
 
+**Try it in one minute, no secrets needed:**
+
 ```bash
-cp .env.example .env      # set TELEGRAM_BOT_TOKEN and PUBLIC_URL at minimum
 npm install
-npm test                  # 69 checks: link, convert, settle, board, alerts
+npm run demo              # then open http://localhost:8787/api/board
+```
+
+Demo mode simulates the Textile market (rates drift, cash-out depth is capped at $600 so the depth probe shows), runs the real Quote Sentinel and board API against its own database, and keeps the Telegram bot off. It also starts by itself on a fresh checkout with no `.env`. It never writes to the real database, and it never switches on by itself on Render: a deployed service missing its token stops with an error instead of showing simulated rates.
+
+**Run the real agent on Celo mainnet:**
+
+```bash
+cp .env.example .env      # set TELEGRAM_BOT_TOKEN and PUBLIC_URL (the only required values)
+npm install
+npm test                  # 80 checks: link, convert, settle, board, alerts, groups, demo
 npm run quote             # live Textile quotes on Celo, read-only
 npm run dev               # web + bot + Sentinel
 ```
@@ -164,6 +176,8 @@ Main settings (see `.env.example`):
 | `SENTINEL_SIZES_USD`, `SENTINEL_INTERVAL_SEC` | What the Sentinel quotes and how often |
 | `REF_OFFICIAL_*`, `REF_PARALLEL_*` | Reference rate sources and labels |
 | `TEXTILE_API_KEY` | Optional Textile partner key |
+| `DEMO_MODE` | `1` forces demo mode (simulated market, bot off) |
+| `BOARD_URL` | Where `GET /` redirects (the public board) |
 
 **Production** runs on Render as one web service (`npm install && npm run build`, start `npx tsx src/main.ts`) with a 1 GB persistent disk at `/var/data`. The agent's private key is never deployed; it was used only to register the ERC-8004 identity.
 
@@ -180,6 +194,7 @@ Main settings (see `.env.example`):
 - Every conversion shows the exact amount received, fee, rate, expiry and "no slippage (firm quote)", and needs explicit confirmation in the page and in the wallet. An expired quote never executes.
 - Quotes are checked against Textile's address book before they reach the user.
 - The public feed exposes no usernames or wallet addresses.
+- `npm audit` reports 0 vulnerabilities. An old `zod` inside the WalletConnect packages is pinned to a patched release with an npm `overrides` entry.
 
 ## Known limitations
 

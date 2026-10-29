@@ -3,7 +3,9 @@
  *   npm run dev      (local)
  *   npm start        (server)
  * Set RUN_SENTINEL=0 if a separate `npm run sentinel` is already running against the same DB.
+ * `npm run demo` (or a fresh checkout with no .env) starts demo mode: see src/demo.ts.
  */
+import { DEMO } from './demo.js' // must stay first: sets demo env before config loads
 import { config } from './lib/config.js'
 import { startServer } from './server/http.js'
 import { createBot, setCommands } from './bot/bot.js'
@@ -13,9 +15,21 @@ import { checkAlerts } from './agent/alerts.js'
 
 startServer()
 
-const bot = createBot()
-await setCommands(bot).catch((e) => console.error('setMyCommands failed', e.message))
-bot.start({ onStart: (me) => console.log(`bot: @${me.username} running (wallet pages at ${config.publicUrl()})`) })
+const bot = DEMO ? null : createBot()
+if (bot) {
+  await setCommands(bot).catch((e) => console.error('setMyCommands failed', e.message))
+  bot.start({ onStart: (me) => console.log(`bot: @${me.username} running (wallet pages at ${config.publicUrl()})`) })
+} else {
+  console.log([
+    '',
+    '  DEMO MODE: no secrets needed. Textile market is simulated; the Telegram bot is off.',
+    `  Board feed:  ${config.publicUrl()}/api/board`,
+    `  History:     ${config.publicUrl()}/api/board/history`,
+    `  Health:      ${config.publicUrl()}/healthz`,
+    '  Set TELEGRAM_BOT_TOKEN and PUBLIC_URL in .env to run the real agent on Celo mainnet.',
+    '',
+  ].join('\n'))
+}
 
 if (process.env.RUN_SENTINEL !== '0') {
   ;(async () => {
@@ -37,4 +51,4 @@ if (process.env.RUN_SENTINEL !== '0') {
   })()
 }
 
-for (const sig of ['SIGINT', 'SIGTERM'] as const) process.once(sig, () => { bot.stop(); process.exit(0) })
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.once(sig, () => { bot?.stop(); process.exit(0) })
